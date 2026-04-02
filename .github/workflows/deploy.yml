@@ -22,7 +22,7 @@ jobs:
 
       - name: Build worker functions
         run: |
-          wrangler pages functions build ./functions --output-dir ./dist
+          wrangler pages functions build ./functions --outdir ./dist
 
       - name: Package dist
         run: |
