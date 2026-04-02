@@ -12,19 +12,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy via Cloudflare Pages API
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Build worker functions
         run: |
-          # Get Cloudflare credentials from environment
+          wrangler pages functions build ./functions --output-dir ./dist
+
+      - name: Package dist
+        run: |
+          zip -r dist.zip dist/
+
+      - name: Create deployment & upload
+        run: |
           CF_EMAIL="${{ vars.CLOUDFARE_EMAIL }}"
           CF_KEY="${{ secrets.CLOUDFARE_API_KEY }}"
           ACCOUNT_ID="${{ vars.CLOUDFARE_ACCOUNT_ID }}"
-          
-          # First create a deployment to get upload URL
+          PROJECT="openclaw-search"
+
+          # Create deployment to get upload URL
           RESPONSE=$(curl -s -X POST \
             -H "X-Auth-Email: $CF_EMAIL" \
             -H "X-Auth-Key: $CF_KEY" \
             -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/openclaw-search/deployments" \
-            -d '{"branch":"main"}')
-          
-          echo "Response: $RESPONSE"
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/$PROJECT/deployments")
+
+          echo "Create deployment response: $RESPONSE"
+
+          UPLOAD_URL=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result']['uploadUrl'])")
+          echo "Upload URL: $UPLOAD_URL"
+
+          # Upload the zip
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$UPLOAD_URL" \
+            -H "Content-Type: application/zip" \
+            --data-binary @dist.zip)
+          echo "Upload HTTP code: $HTTP_CODE"
