@@ -1,7 +1,2 @@
 [pages]
-compatibility_flags = ["nodejs_compat"]
-routes = { pattern = "search.*", zone_name = "downtoearthclf.ddns-ip.net" }
-
-[env.production]
-name = "openclaw-search"
-compatibility_flags = ["nodejs_compat"]
+functions_dir = "./functions"
