@@ -12,12 +12,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: openclaw-search
-          directory: .
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          wranglerVersion: "3"
+      - name: Deploy via Cloudflare Pages API
+        run: |
+          # Get Cloudflare credentials from environment
+          CF_EMAIL="${{ vars.CLOUDFARE_EMAIL }}"
+          CF_KEY="${{ secrets.CLOUDFARE_API_KEY }}"
+          ACCOUNT_ID="${{ vars.CLOUDFARE_ACCOUNT_ID }}"
+          
+          # First create a deployment to get upload URL
+          RESPONSE=$(curl -s -X POST \
+            -H "X-Auth-Email: $CF_EMAIL" \
+            -H "X-Auth-Key: $CF_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/openclaw-search/deployments" \
+            -d '{"branch":"main"}')
+          
+          echo "Response: $RESPONSE"
