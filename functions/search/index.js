@@ -8,6 +8,36 @@ export async function onRequest({ request, env }) {
     headers: { "Content-Type": "application/json" }
   });
 
+  // === Zhipu Web Search API ===
+  if (engine === "zhipu") {
+    const apiKey = "3dd368b7959d4bbdb789192b598fba34.Y5830RtktIb8rIpi";
+    try {
+      const resp = await fetch("https://open.bigmodel.cn/api/paas/v4/web_search", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          query: q,
+          top_n: 10,
+          recency_days: -1
+        })
+      });
+      const data = await resp.json();
+      return new Response(JSON.stringify(data, null, 2), {
+        status: resp.status,
+        headers: { "Content-Type": "application/json; charset=utf-8" }
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }
+
+  // === Traditional search engines ===
   const engines = {
     google:     "https://www.google.com/search?q=" + encodeURIComponent(q) + "&hl=en",
     bing:       "https://www.bing.com/search?q=" + encodeURIComponent(q),
