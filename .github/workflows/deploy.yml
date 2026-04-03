@@ -24,31 +24,13 @@ jobs:
         run: |
           wrangler pages functions build ./functions --outdir ./dist
 
-      - name: Package dist
+      - name: Deploy to Cloudflare Pages
         run: |
-          zip -r dist.zip dist/
-
-      - name: Create deployment & upload
-        run: |
-          CF_EMAIL="${{ vars.CLOUDFARE_EMAIL }}"
-          CF_KEY="${{ secrets.CLOUDFARE_API_KEY }}"
-          ACCOUNT_ID="${{ vars.CLOUDFARE_ACCOUNT_ID }}"
-          PROJECT="openclaw-search"
-
-          # Create deployment to get upload URL
-          RESPONSE=$(curl -s -X POST \
-            -H "X-Auth-Email: $CF_EMAIL" \
-            -H "X-Auth-Key: $CF_KEY" \
-            -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/$PROJECT/deployments")
-
-          echo "Create deployment response: $RESPONSE"
-
-          UPLOAD_URL=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result']['uploadUrl'])")
-          echo "Upload URL: $UPLOAD_URL"
-
-          # Upload the zip
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$UPLOAD_URL" \
-            -H "Content-Type: application/zip" \
-            --data-binary @dist.zip)
-          echo "Upload HTTP code: $HTTP_CODE"
+          wrangler pages deploy ./dist \
+            --project-name=openclaw-search \
+            --branch=main \
+            --commit-hash=${{ github.sha }} \
+            --commit-message="${{ github.event.head_commit.message }}"
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFARE_ACCOUNT_ID }}
