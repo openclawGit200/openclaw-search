@@ -19,7 +19,7 @@ export async function onRequest({ request, env }) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          query: q,
+          search_query: q,
           top_n: 10,
           recency_days: -1
         })
