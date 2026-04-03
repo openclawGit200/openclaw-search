@@ -28,13 +28,20 @@ jobs:
         run: |
           wrangler pages functions build ./functions --outdir ./dist
 
+      - name: Prepare Worker bundle
+        run: |
+          # Rename compiled worker to _worker.js (required by Cloudflare Pages)
+          mv dist/index.js dist/_worker.js
+          # Create routing config - all routes go to Worker
+          echo '{"include":["/*"],"exclude":[]}' > dist/_routes.json
+
       - name: Deploy to Cloudflare Pages
         run: |
           wrangler pages deploy ./dist \
             --project-name=openclaw-search \
             --branch=main \
-            --commit-hash=${{ github.sha }} \
-            --commit-dirty=true
+            --commit-dirty=true \
+            --no-bundle
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFARE_ACCOUNT_ID }}
