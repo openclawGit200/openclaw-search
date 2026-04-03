@@ -20,9 +20,8 @@ export async function onRequest({ request, env }) {
         },
         body: JSON.stringify({
           search_query: q,
-          search_engine: "google",
-          top_n: 10,
-          recency_days: -1
+          search_engine: "search_pro_quark",
+          count: 10
         })
       });
       const data = await resp.json();
