@@ -20,6 +20,7 @@ export async function onRequest({ request, env }) {
         },
         body: JSON.stringify({
           search_query: q,
+          search_engine: "google",
           top_n: 10,
           recency_days: -1
         })
