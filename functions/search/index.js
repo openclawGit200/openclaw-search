@@ -10,68 +10,51 @@ export async function onRequest({ request, env }) {
 
   const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-  // ── Cascade: fetch all three, combine results ──
+  // ── Cascade: fetch all three in parallel, then combine ──
   if (engine === "cascade") {
-    const results = { google: null, duckduckgo: null, zhipu: null };
-    const errors = {};
+    const apiKey = "3dd368b7959d4bbdb789192b598fba34.Y5830RtktIb8rIpi";
 
-    // 1) Google
-    try {
-      const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(q) + "&hl=en";
-      const r1 = await fetch(googleUrl, {
+    const [googleRes, ddgRes, zhipuRes] = await Promise.all([
+      // 1) Google
+      fetch("https://www.google.com/search?q=" + encodeURIComponent(q) + "&hl=en", {
         headers: { "User-Agent": userAgent, "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" }
-      });
-      results.google = { status: r1.status, ok: r1.ok, blocked: r1.status === 429 || r1.status === 403 };
-    } catch (e) {
-      errors.google = e.message;
-    }
+      }).then(r => ({ status: r.status, ok: r.ok, blocked: r.status === 429 || r.status === 403 })).catch(e => ({ error: e.message })),
 
-    // 2) DuckDuckGo
-    try {
-      const ddgUrl = "https://duckduckgo.com/html/?q=" + encodeURIComponent(q);
-      const r2 = await fetch(ddgUrl, {
+      // 2) DuckDuckGo
+      fetch("https://duckduckgo.com/html/?q=" + encodeURIComponent(q), {
         headers: { "User-Agent": userAgent, "Accept": "text/html" }
-      });
-      const html = await r2.text();
-      // Extract titles + links from DDG HTML
-      const titles = [], links = [];
-      const re = /<a class="result__a"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
-      let m;
-      while ((m = re.exec(html)) !== null && titles.length < 10) {
-        links.push(m[1]);
-        titles.push(m[2].replace(/<[^>]+>/g, ""));
-      }
-      results.duckduckgo = { status: r2.status, ok: r2.ok, titles, links };
-    } catch (e) {
-      errors.duckduckgo = e.message;
-    }
+      }).then(async r => {
+        const html = await r.text();
+        const titles = [], links = [];
+        const re = /<a class="result__a"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
+        let m;
+        while ((m = re.exec(html)) !== null && titles.length < 10) {
+          links.push(m[1]);
+          titles.push(m[2].replace(/<[^>]+>/g, ""));
+        }
+        return { status: r.status, ok: r.ok, titles, links };
+      }).catch(e => ({ error: e.message })),
 
-    // 3) Zhipu
-    try {
-      const apiKey = "3dd368b7959d4bbdb789192b598fba34.Y5830RtktIb8rIpi";
-      const r3 = await fetch("https://open.bigmodel.cn/api/paas/v4/web_search", {
+      // 3) Zhipu
+      fetch("https://open.bigmodel.cn/api/paas/v4/web_search", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          search_query: q,
-          search_engine: "search_pro_quark",
-          count: 10
-        })
-      });
-      const data = await r3.json();
-      results.zhipu = { status: r3.status, ok: r3.ok, data };
-    } catch (e) {
-      errors.zhipu = e.message;
-    }
+        body: JSON.stringify({ search_query: q, search_engine: "search_pro_quark", count: 10 })
+      }).then(async r => {
+        const data = await r.json();
+        return { status: r.status, ok: r.ok, data };
+      }).catch(e => ({ error: e.message }))
+    ]);
+
+    const results = { google: googleRes, duckduckgo: ddgRes, zhipu: zhipuRes };
 
     return new Response(JSON.stringify({
       query: q,
       engines: results,
-      errors: Object.keys(errors).length ? errors : undefined,
-      note: "All three engines fetched. Synthesize titles/links/data for the user."
+      note: "All three engines fetched in parallel. Synthesize titles/links/data for the user."
     }, null, 2), {
       status: 200,
       headers: { "Content-Type": "application/json; charset=utf-8" }
