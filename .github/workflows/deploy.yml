@@ -32,5 +32,5 @@ jobs:
             --commit-hash=${{ github.sha }} \
             --commit-message="${{ github.event.head_commit.message }}"
         env:
-          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFARE_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFARE_ACCOUNT_ID }}
