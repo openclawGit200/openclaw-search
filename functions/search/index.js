@@ -15,10 +15,39 @@ export async function onRequest({ request, env }) {
     const apiKey = "3dd368b7959d4bbdb789192b598fba34.Y5830RtktIb8rIpi";
 
     const [googleRes, ddgRes, zhipuRes] = await Promise.all([
-      // 1) Google
+      // 1) Google — parse HTML for titles and links
       fetch("https://www.google.com/search?q=" + encodeURIComponent(q) + "&hl=en", {
         headers: { "User-Agent": userAgent, "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" }
-      }).then(r => ({ status: r.status, ok: r.ok, blocked: r.status === 429 || r.status === 403 })).catch(e => ({ error: e.message })),
+      }).then(async r => {
+        const html = await r.text();
+        const titles = [], links = [];
+        // <div class="BNeawe"> — main result snippets
+        const re = /<div class="BNeawe[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
+        let m;
+        while ((m = re.exec(html)) !== null && titles.length < 10) {
+          const text = m[1].replace(/<[^>]+>/g, "").trim();
+          if (text && text.length > 10) {
+            titles.push(text);
+          }
+        }
+        // <a href="..."> — result links
+        const linkRe = /<a href="(\/url\?q=[^"&amp;]+|https?:\/\/[^"]+)"[^>]*>/g;
+        const seen = new Set();
+        while ((m = linkRe.exec(html)) !== null && links.length < 10) {
+          let link = m[1].replace("/url?q=", "").split("&")[0];
+          if (link.startsWith("http") && !seen.has(link)) {
+            seen.add(link);
+            links.push(link);
+          }
+        }
+        return {
+          status: r.status,
+          ok: r.ok,
+          blocked: r.status === 429 || r.status === 403,
+          titles,
+          links
+        };
+      }).catch(e => ({ error: e.message })),
 
       // 2) DuckDuckGo
       fetch("https://duckduckgo.com/html/?q=" + encodeURIComponent(q), {
