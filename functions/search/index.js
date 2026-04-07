@@ -142,7 +142,7 @@ export async function onRequest({ request, env }) {
 
     const [googleRes, ddgRes, zhipuRes, bingRes, baiduRes,
            braveRes, yahooRes, ecosiaRes, startpageRes, qwantRes,
-           weixinRes, toutiaoRes, sogouRes, s360Res, jisiluRes,
+           weixinRes, toutiaoRes, s360Res, jisiluRes,
            googleHKKRes, bingCNRes] = await Promise.all([
 
       // ── Global (9) ──
@@ -245,13 +245,6 @@ export async function onRequest({ request, env }) {
         return { status: r.status, ok: r.ok, titles, links };
       }).catch(e => ({ error: e.message })),
 
-      fetch("https://sogou.com/web?query=" + encodeURIComponent(q), {
-        headers: { "User-Agent": zhUa, "Accept": "text/html", "Accept-Language": "zh-CN,zh;q=0.9" }
-      }).then(async r => {
-        const html = await r.text();
-        const { titles, links } = parseSogou(html);
-        return { status: r.status, ok: r.ok, titles, links };
-      }).catch(e => ({ error: e.message })),
 
       fetch("https://www.so.com/s?q=" + encodeURIComponent(q), {
         headers: { "User-Agent": zhUa, "Accept": "text/html", "Accept-Language": "zh-CN,zh;q=0.9" }
@@ -301,7 +294,6 @@ export async function onRequest({ request, env }) {
         qwant:       qwantRes,
         weixin:      weixinRes,
         toutiao:     toutiaoRes,
-        sogou:       sogouRes,
         "360":       s360Res,
         jisilu:      jisiluRes,
         google_hk:   googleHKKRes,
@@ -349,7 +341,6 @@ export async function onRequest({ request, env }) {
     qwant:       "https://www.qwant.com/?q=" + encodeURIComponent(q),
     weixin:      "https://wx.sogou.com/weixin?type=2&query=" + encodeURIComponent(q),
     toutiao:     "https://so.toutiao.com/search?keyword=" + encodeURIComponent(q),
-    sogou:       "https://sogou.com/web?query=" + encodeURIComponent(q),
     "360":       "https://www.so.com/s?q=" + encodeURIComponent(q),
     jisilu:      "https://www.jisilu.cn/explore/?keyword=" + encodeURIComponent(q),
     google_hk:   "https://www.google.com.hk/search?q=" + encodeURIComponent(q),
