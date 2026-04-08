@@ -1,45 +1,24 @@
-name: Deploy to Cloudflare Pages
+name: Deploy Search Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
-      - name: Install wrangler
+      - name: Install Wrangler
         run: npm install -g wrangler
 
-      - name: Create Pages project (idempotent)
-        run: |
-          wrangler pages project create openclaw-search --production-branch main || true
-
-      - name: Build worker functions
-        run: |
-          wrangler pages functions build ./functions --outdir ./dist
-
-      - name: Prepare Worker bundle
-        run: |
-          mv dist/index.js dist/_worker.js
-          echo '{"version":1,"include":["/*"],"exclude":[]}' > dist/_routes.json
-
       - name: Deploy to Cloudflare Pages
-        run: |
-          wrangler pages deploy ./dist \
-            --project-name=openclaw-search \
-            --branch=main \
-            --commit-dirty=true \
-            --no-bundle
+        run: wrangler pages deploy functions --project-name=openclaw-search --commit-message="deploy search function"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
